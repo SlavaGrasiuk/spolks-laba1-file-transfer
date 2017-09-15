@@ -12,7 +12,7 @@ public:
 	~lab1();
 
 private:
-	Ui::lab1Class ui;
+	Ui::lab1Window ui;
 };
 
 #endif // LAB1_H
