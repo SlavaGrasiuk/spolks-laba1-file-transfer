@@ -9,7 +9,7 @@
 #include "DragFrame.hpp"
 #include "lab1.h"
 
-constexpr qint64 g_maxLen = 32'768;
+constexpr qint64 g_blockLen = 32'768;		//bytes
 
 /*
 ==================
@@ -44,9 +44,12 @@ lab1::lab1(QWidget *parent): QMainWindow(parent) {
 	m_tcpSocket = new QTcpSocket(this);
 
 	connect(m_ui.startListenBtn, &QPushButton::clicked, this, &lab1::OnStartListen);
+
 	connect(m_tcpServer, &QTcpServer::newConnection, this, &lab1::OnIncomingConnection);
+
 	connect(m_tcpSocket, &QTcpSocket::connected, this, &lab1::OnConnected);
 	connect(m_tcpSocket, &QTcpSocket::disconnected, this, &lab1::OnDisconected);
+	connect(m_tcpSocket, &QTcpSocket::readyRead, this, &lab1::OnClientReadyRead);
 }
 
 /*
@@ -55,6 +58,7 @@ lab1::~lab1
 ==================
 */
 lab1::~lab1() {
+	delete m_tcpServer;
 	delete m_tcpSocket;
 	delete m_dragFrame;
 }
@@ -91,10 +95,12 @@ lab1::OnConnected
 */
 void lab1::OnConnected() {
 	if (m_sendState == SendState::SendHeader) {
-		const qint64 size = GetFileSize();
+		m_totalSize = GetFileSize();
+		m_doneSize = 0;
+		m_ui.progressBar->setMaximum(m_totalSize);
 
 		QByteArray header;
-		header.append(reinterpret_cast<const char*>(&size), sizeof size);
+		header.append(reinterpret_cast<const char*>(&m_totalSize), sizeof m_totalSize);
 		header.append(m_fileInfo.fileName());
 
 		m_tcpSocket->write(header);
@@ -109,9 +115,21 @@ lab1::OnBytesWrite
 ==================
 */
 void lab1::OnBytesWrite(qint64 bytes) {
-	if (m_sendState == SendState::WaitAck) {
-		//send part of file here
-		m_sendState = SendState::SendData;
+	static char buffer[g_blockLen];
+
+	if (m_sendState == SendState::SendData) {
+		 m_fileToTransfer.read(buffer, g_blockLen);
+		 const qint64 readedSize = m_fileToTransfer.gcount();
+		 m_doneSize += readedSize;
+		 
+			m_tcpSocket->write(buffer, readedSize);
+		 m_ui.progressBar->setValue(m_doneSize);
+
+		 if (readedSize < g_blockLen) {
+			 m_sendState = SendState::SendLastData;
+		 }
+	} else if (m_sendState == SendState::SendLastData) {
+		//all data transfered successful
 	}
 }
 
@@ -122,18 +140,42 @@ lab1::OnReadyRead
 */
 void lab1::OnReadyRead() {
 	if (m_recvState == SendState::SendHeader) {
-		const QByteArray header = m_recvSocket->read(g_maxLen);
+		const QByteArray header = m_recvSocket->read(g_blockLen);
 		const qint64 size = *reinterpret_cast<const qint64*>(header.data());
-		const QString filename(header.mid(sizeof size));
+		const QString incomingFileName(header.mid(sizeof size));
 
-		auto reply = QMessageBox::question(this, "Incoming file", "Receive file " + filename + " (" + QString::number(size) + " bytes) from " + m_recvSocket->peerAddress().toString() + '?', QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::No);
+		auto reply = QMessageBox::question(this, "Incoming file", "Receive file " + incomingFileName + " (" + QString::number(size) + " bytes) from " + m_recvSocket->peerAddress().toString() + '?', QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::No);
 		if (reply == QMessageBox::StandardButton::Yes) {
-			/*auto fileName = QFileDialog::getSaveFileName(this, QString::fromLocal8Bit("Сохранить изображение"), filename, QString::fromLocal8Bit("Изображения Jpeg (*.jpg);;Изображения PNG (*.png);;Изображения BMP (*.bmp)"));
-			if (fileName.isEmpty()) {
+			auto saveFileName = QFileDialog::getSaveFileName(this, QString::fromLocal8Bit("Сохранить файл"), incomingFileName, QString::fromLocal8Bit("Все файлы (*.*)"));
+			if (saveFileName.isEmpty()) {
+				delete m_recvSocket;
 				return;
-			}*/
+			}
+			
+			m_fileToReceive.open(saveFileName.toStdString(), std::ios::binary);
+			m_ui.progressBar->setMaximum(size);
+			m_ui.progressBar->setEnabled(true);
+			m_doneSize = 0;
+			m_totalSize = size;
+
+			m_recvSocket->write("OK");
+			m_recvState = SendState::SendData;
 		} else {
 			delete m_recvSocket;
+		}
+	} else if (m_recvState == SendState::SendData) {
+		static char readBuf[g_blockLen];
+
+		const qint64 readedSize = m_recvSocket->read(readBuf, g_blockLen);
+
+		m_fileToReceive.write(readBuf, readedSize);
+		m_doneSize += readedSize;
+		m_ui.progressBar->setValue(m_doneSize);
+		
+		if (m_doneSize == m_totalSize) {
+			m_fileToReceive.close();
+			delete m_recvSocket;
+			m_recvState = SendState::SendHeader;
 		}
 	}
 }
@@ -155,14 +197,17 @@ void lab1::OnDisconected() {
 
 /*
 ==================
-lab1::GetFileSize
+lab1::OnClientReadyRead
 ==================
 */
-qint64 lab1::GetFileSize() {
-	m_fileToTransfer.seekg(0, std::ios::end);
-	auto size = m_fileToTransfer.tellg();
-	m_fileToTransfer.seekg(0);
-	return size;
+void lab1::OnClientReadyRead() {
+	if (m_sendState == SendState::WaitAck) {
+		QString ack = m_tcpSocket->read(g_blockLen);
+		if (ack == "OK") {
+			m_sendState = SendState::SendData;
+			OnBytesWrite(0);
+		}
+	}
 }
 
 /*
@@ -181,4 +226,16 @@ void lab1::OnOpenFile(std::string name) {
 
 		}
 	}
+}
+
+/*
+==================
+lab1::GetFileSize
+==================
+*/
+qint64 lab1::GetFileSize() {
+	m_fileToTransfer.seekg(0, std::ios::end);
+	auto size = m_fileToTransfer.tellg();
+	m_fileToTransfer.seekg(0);
+	return size;
 }

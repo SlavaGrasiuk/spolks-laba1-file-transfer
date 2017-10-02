@@ -34,11 +34,14 @@ private slots:
 	void OnBytesWrite(qint64 bytes);
 	void OnReadyRead();
 	void OnDisconected();
+	void OnClientReadyRead();
 
 private:
 	Ui::lab1Window m_ui;
 	std::ifstream m_fileToTransfer;
+	std::ofstream m_fileToReceive;
 	QFileInfo m_fileInfo;
+	qint64 m_totalSize, m_doneSize;
 	DragFrame *m_dragFrame;
 	QTcpServer *m_tcpServer;
 	QTcpSocket *m_tcpSocket, *m_recvSocket;
