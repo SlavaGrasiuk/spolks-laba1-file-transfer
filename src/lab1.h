@@ -33,6 +33,7 @@ private slots:
 	void OnConnected();
 	void OnBytesWrite(qint64 bytes);
 	void OnReadyRead();
+	void OnDisconected();
 
 private:
 	Ui::lab1Window m_ui;
@@ -40,8 +41,8 @@ private:
 	QFileInfo m_fileInfo;
 	DragFrame *m_dragFrame;
 	QTcpServer *m_tcpServer;
-	QTcpSocket *m_tcpSocket;
-	SendState m_sendState;
+	QTcpSocket *m_tcpSocket, *m_recvSocket;
+	SendState m_sendState, m_recvState;
 
 private:
 	qint64 GetFileSize();

@@ -1,5 +1,7 @@
 #include <QIntValidator>
 #include <QRegExpValidator>
+#include <QNetworkProxyFactory>
+#include <QFileDialog>
 #include <QMessageBox>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -7,6 +9,7 @@
 #include "DragFrame.hpp"
 #include "lab1.h"
 
+constexpr qint64 g_maxLen = 32'768;
 
 /*
 ==================
@@ -35,12 +38,15 @@ lab1::lab1(QWidget *parent): QMainWindow(parent) {
 	m_ui.listenProtocol->addItem("TCP");
 	m_ui.listenProtocol->addItem("UDP");
 
+	QNetworkProxyFactory::setUseSystemConfiguration(false);		//Qt 5.8.0 workaround
+
 	m_tcpServer = new QTcpServer(this);
 	m_tcpSocket = new QTcpSocket(this);
 
 	connect(m_ui.startListenBtn, &QPushButton::clicked, this, &lab1::OnStartListen);
 	connect(m_tcpServer, &QTcpServer::newConnection, this, &lab1::OnIncomingConnection);
 	connect(m_tcpSocket, &QTcpSocket::connected, this, &lab1::OnConnected);
+	connect(m_tcpSocket, &QTcpSocket::disconnected, this, &lab1::OnDisconected);
 }
 
 /*
@@ -61,7 +67,7 @@ lab1::OnStartListen
 void lab1::OnStartListen() {
 	if (!m_tcpServer->listen(QHostAddress::SpecialAddress::Any, m_ui.listenPortEdit->text().toShort())) {
 		QMessageBox msgBox;
-		msgBox.setText("Can't start server!");
+		msgBox.setText("Can't start server! " + m_tcpServer->errorString());
 		msgBox.setIcon(QMessageBox::Icon::Critical);
 		msgBox.exec();
 	}
@@ -73,7 +79,9 @@ lab1::OnIncomingConnection
 ==================
 */
 void lab1::OnIncomingConnection() {
-	
+	m_recvSocket = m_tcpServer->nextPendingConnection();
+	m_recvState = SendState::SendHeader;
+	connect(m_recvSocket, &QTcpSocket::readyRead, this, &lab1::OnReadyRead);
 }
 
 /*
@@ -113,7 +121,36 @@ lab1::OnReadyRead
 ==================
 */
 void lab1::OnReadyRead() {
+	if (m_recvState == SendState::SendHeader) {
+		const QByteArray header = m_recvSocket->read(g_maxLen);
+		const qint64 size = *reinterpret_cast<const qint64*>(header.data());
+		const QString filename(header.mid(sizeof size));
 
+		auto reply = QMessageBox::question(this, "Incoming file", "Receive file " + filename + " (" + QString::number(size) + " bytes) from " + m_recvSocket->peerAddress().toString() + '?', QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::No);
+		if (reply == QMessageBox::StandardButton::Yes) {
+			/*auto fileName = QFileDialog::getSaveFileName(this, QString::fromLocal8Bit("Сохранить изображение"), filename, QString::fromLocal8Bit("Изображения Jpeg (*.jpg);;Изображения PNG (*.png);;Изображения BMP (*.bmp)"));
+			if (fileName.isEmpty()) {
+				return;
+			}*/
+		} else {
+			delete m_recvSocket;
+		}
+	}
+}
+
+/*
+==================
+lab1::OnDisconected
+==================
+*/
+void lab1::OnDisconected() {
+	m_sendState = SendState::SendHeader;
+	m_fileToTransfer.close();
+
+	QMessageBox msgBox;
+	msgBox.setText("Server disconected!");
+	msgBox.setIcon(QMessageBox::Icon::Information);
+	msgBox.exec();
 }
 
 /*
