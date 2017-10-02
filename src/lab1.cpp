@@ -3,6 +3,7 @@
 #include <QMessageBox>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QByteArray>
 #include "DragFrame.hpp"
 #include "lab1.h"
 
@@ -81,10 +82,50 @@ lab1::OnConnected
 ==================
 */
 void lab1::OnConnected() {
-	QMessageBox msgBox;
-	msgBox.setText("Connected!");
-	msgBox.setIcon(QMessageBox::Icon::Information);
-	msgBox.exec();
+	if (m_sendState == SendState::SendHeader) {
+		const qint64 size = GetFileSize();
+
+		QByteArray header;
+		header.append(reinterpret_cast<const char*>(&size), sizeof size);
+		header.append(m_fileInfo.fileName());
+
+		m_tcpSocket->write(header);
+
+		m_sendState = SendState::WaitAck;
+	}
+}
+
+/*
+==================
+lab1::OnBytesWrite
+==================
+*/
+void lab1::OnBytesWrite(qint64 bytes) {
+	if (m_sendState == SendState::WaitAck) {
+		//send part of file here
+		m_sendState = SendState::SendData;
+	}
+}
+
+/*
+==================
+lab1::OnReadyRead
+==================
+*/
+void lab1::OnReadyRead() {
+
+}
+
+/*
+==================
+lab1::GetFileSize
+==================
+*/
+qint64 lab1::GetFileSize() {
+	m_fileToTransfer.seekg(0, std::ios::end);
+	auto size = m_fileToTransfer.tellg();
+	m_fileToTransfer.seekg(0);
+	return size;
 }
 
 /*
@@ -95,8 +136,10 @@ lab1::OnOpenFile
 void lab1::OnOpenFile(std::string name) {
 	m_fileToTransfer.open(name, std::ios::binary);
 	if (m_fileToTransfer) {
+		m_fileInfo = QString::fromStdString(name);
 		if (m_ui.protocolSelect->itemText(m_ui.protocolSelect->currentIndex()) == "TCP") {
 			m_tcpSocket->connectToHost(m_ui.ipAddrEdit->text(), m_ui.portEdit->text().toShort());
+			m_sendState = SendState::SendHeader;
 		} else {
 
 		}
