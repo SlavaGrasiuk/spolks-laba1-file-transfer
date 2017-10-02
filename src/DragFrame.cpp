@@ -31,7 +31,7 @@ DragFrame::dropEvent
 */
 void DragFrame::dropEvent(QDropEvent * event) {
 	if (event->mimeData()->hasUrls()) {
-		auto name = event->mimeData()->urls().at(0).toLocalFile();
+		auto name = event->mimeData()->urls().at(0).toLocalFile().toStdString();
 		event->acceptProposedAction();
 		emit GetFile(name);
 	}

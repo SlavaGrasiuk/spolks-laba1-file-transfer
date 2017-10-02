@@ -12,7 +12,7 @@ public:
 	DragFrame(QWidget *parent = 0);
 
 signals:
-	void GetFile(QString name);
+	void GetFile(std::string name);
 
 protected:
 	void dragEnterEvent(QDragEnterEvent *event) override;

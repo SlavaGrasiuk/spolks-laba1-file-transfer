@@ -19,14 +19,17 @@ public:
 	~lab1();
 
 private slots:
-	void OnOpenFile(QString name);
+	void OnOpenFile(std::string name);
+	void OnStartListen();
+	void OnIncomingConnection();
+	void OnConnected();
 
 private:
 	Ui::lab1Window m_ui;
 	std::ifstream m_fileToTransfer;
 	DragFrame *m_dragFrame;
-	QTcpServer *m_server;
-	QTcpSocket *m_socket;
+	QTcpServer *m_tcpServer;
+	QTcpSocket *m_tcpSocket;
 };
 
 #endif // LAB1_H
