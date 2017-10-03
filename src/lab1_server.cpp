@@ -22,6 +22,11 @@ lab1::OnListenProtocolChanged
 ==================
 */
 void lab1::OnListenProtocolChanged(int index) {
+	if (m_ui.listenProtocol->itemText(m_ui.listenProtocol->currentIndex()) == "TCP") {
+		m_ui.udpListenAdress->setEnabled(false);
+	} else {
+		m_ui.udpListenAdress->setEnabled(true);
+	}
 	m_ui.startListenBtn->setEnabled(true);
 }
 
@@ -34,24 +39,29 @@ void lab1::OnStartListen() {
 	if (m_tcpServer->isListening()) {
 		m_tcpServer->close();
 	}
-	if (!m_tcpServer->listen(QHostAddress::SpecialAddress::Any, m_ui.listenPortEdit->text().toShort())) {
-		QMessageBox msgBox;
-		msgBox.setText(QString::fromLocal8Bit("Не удалось запустить сервер: ") + m_tcpServer->errorString());
-		msgBox.setIcon(QMessageBox::Icon::Critical);
-		msgBox.exec();
-	} else {
-		m_ui.startListenBtn->setEnabled(false);
+	if (m_ui.listenProtocol->itemText(m_ui.listenProtocol->currentIndex()) == "TCP") {
+		if (!m_tcpServer->listen(QHostAddress::SpecialAddress::Any, m_ui.listenPortEdit->text().toShort())) {
+			QMessageBox msgBox;
+			msgBox.setText(QString::fromLocal8Bit("Не удалось запустить сервер: ") + m_tcpServer->errorString());
+			msgBox.setIcon(QMessageBox::Icon::Critical);
+			msgBox.exec();
+		} else {
+			m_ui.startListenBtn->setEnabled(false);
+		}
+	} else {	//udp
+
 	}
+	
 }
 
 /*
 ==================
-lab1::OnReadyRead
+lab1::OnTCPReadyRead
 ==================
 */
-void lab1::OnReadyRead() {
+void lab1::OnTCPReadyRead() {
 	if (m_recvState == SendState::SendHeader) {
-		const QByteArray header = m_recvSocket->read(g_blockLen);
+		const QByteArray header = m_recvSocket->read(g_blockLenTCP);
 		const qint64 size = *reinterpret_cast<const qint64*>(header.data());
 		const QString incomingFileName(header.mid(sizeof size));
 
@@ -77,9 +87,9 @@ void lab1::OnReadyRead() {
 			m_recvSocket->close();
 		}
 	} else if (m_recvState == SendState::SendData) {
-		static char readBuf[g_blockLen];
+		static char readBuf[g_blockLenTCP];
 
-		const qint64 readedSize = m_recvSocket->read(readBuf, g_blockLen);
+		const qint64 readedSize = m_recvSocket->read(readBuf, g_blockLenTCP);
 
 		m_fileToReceive.write(readBuf, readedSize);
 		m_doneSize += readedSize;
@@ -93,25 +103,25 @@ void lab1::OnReadyRead() {
 
 /*
 ==================
-lab1::OnHostLoseClient
+lab1::OnTCPHostLoseClient
 ==================
 */
-void lab1::OnHostLoseClient() {
+void lab1::OnTCPHostLoseClient() {
 	ResetServer();
 }
 
 /*
 ==================
-lab1::OnIncomingConnection
+lab1::OnTCPIncomingConnection
 
 	Receive starts from here.
 ==================
 */
-void lab1::OnIncomingConnection() {
+void lab1::OnTCPIncomingConnection() {
 	m_recvSocket = m_tcpServer->nextPendingConnection();
 	m_recvState = SendState::SendHeader;
-	connect(m_recvSocket, &QTcpSocket::readyRead, this, &lab1::OnReadyRead);
-	connect(m_recvSocket, &QTcpSocket::disconnected, this, &lab1::OnHostLoseClient);
+	connect(m_recvSocket, &QTcpSocket::readyRead, this, &lab1::OnTCPReadyRead);
+	connect(m_recvSocket, &QTcpSocket::disconnected, this, &lab1::OnTCPHostLoseClient);
 }
 
 /*

@@ -9,21 +9,21 @@
 
 /*
 ==================
-lab1::OnClientWriteBytesToHost
+lab1::OnTCPClientWriteBytesToHost
 ==================
 */
-void lab1::OnClientWriteBytesToHost(qint64 bytes) {
-	static char buffer[g_blockLen];
+void lab1::OnTCPClientWriteBytesToHost(qint64 bytes) {
+	static char buffer[g_blockLenTCP];
 
 	if (m_sendState == SendState::SendData) {
-		m_fileToTransfer.read(buffer, g_blockLen);
+		m_fileToTransfer.read(buffer, g_blockLenTCP);
 		const qint64 readedSize = m_fileToTransfer.gcount();
 		m_doneSize += readedSize;
 
 		m_tcpSocket->write(buffer, readedSize);
 		m_ui.progressBar->setValue(m_doneSize);
 
-		if (readedSize < g_blockLen) {
+		if (m_doneSize == m_totalSize) {
 			m_sendState = SendState::SendLastData;
 		}
 	} else if (m_sendState == SendState::SendLastData) {
@@ -36,38 +36,38 @@ void lab1::OnClientWriteBytesToHost(qint64 bytes) {
 
 /*
 ==================
-lab1::OnClientDisconectedFromHost
+lab1::OnTCPClientDisconectedFromHost
 ==================
 */
-void lab1::OnClientDisconectedFromHost() {
+void lab1::OnTCPClientDisconectedFromHost() {
 	ResetClient();
 }
 
 /*
 ==================
-lab1::OnClientReadyRead
+lab1::OnTCPClientReadyRead
 
 	Server has received header and send to us acknowlege. Start file transfer part by part.
 ==================
 */
-void lab1::OnClientReadyRead() {
+void lab1::OnTCPClientReadyRead() {
 	if (m_sendState == SendState::WaitAck) {
-		const QString ack = m_tcpSocket->read(g_blockLen);
+		const QString ack = m_tcpSocket->read(g_blockLenTCP);
 		if (ack == "OK") {
-			m_sendState = SendState::SendData;		//next - OnClientWriteBytesToHost
-			OnClientWriteBytesToHost(0);
+			m_sendState = SendState::SendData;		//next - OnTCPClientWriteBytesToHost
+			OnTCPClientWriteBytesToHost(0);
 		}
 	}
 }
 
 /*
 ==================
-lab1::OnClientConnectedToHost
+lab1::OnTCPClientConnectedToHost
 
 	Successful connected to server. Now send header - file size and name.
 ==================
 */
-void lab1::OnClientConnectedToHost() {
+void lab1::OnTCPClientConnectedToHost() {
 	if (m_sendState == SendState::SendHeader) {
 		InitTransmit();
 		m_totalSize = GetFileSize();
@@ -80,7 +80,7 @@ void lab1::OnClientConnectedToHost() {
 
 		m_tcpSocket->write(header);
 
-		m_sendState = SendState::WaitAck;	//next - OnClientReadyRead
+		m_sendState = SendState::WaitAck;	//next - OnTCPClientReadyRead
 	}
 }
 
@@ -97,7 +97,7 @@ void lab1::OnClientOpenFile(std::string name) {
 	if (m_fileToTransfer) {
 		m_fileInfo = QString::fromStdString(name);
 		if (m_ui.protocolSelect->itemText(m_ui.protocolSelect->currentIndex()) == "TCP") {
-			m_tcpSocket->connectToHost(m_ui.ipAddrEdit->text(), m_ui.portEdit->text().toShort());	//next - OnClientConnectedToHost
+			m_tcpSocket->connectToHost(m_ui.ipAddrEdit->text(), m_ui.portEdit->text().toShort());	//next - OnTCPClientConnectedToHost
 			if (!m_tcpSocket->waitForConnected()) {
 				QMessageBox msgBox;
 				msgBox.setText(QString::fromLocal8Bit("Ошибка подключения к серверу: ") + m_tcpSocket->errorString());

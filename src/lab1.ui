@@ -41,7 +41,7 @@
        <rect>
         <x>90</x>
         <y>10</y>
-        <width>101</width>
+        <width>95</width>
         <height>20</height>
        </rect>
       </property>
@@ -140,8 +140,8 @@
      <widget class="QLineEdit" name="listenPortEdit">
       <property name="geometry">
        <rect>
-        <x>140</x>
-        <y>30</y>
+        <x>110</x>
+        <y>20</y>
         <width>61</width>
         <height>20</height>
        </rect>
@@ -156,8 +156,8 @@
      <widget class="QLabel" name="label_4">
       <property name="geometry">
        <rect>
-        <x>56</x>
-        <y>30</y>
+        <x>17</x>
+        <y>20</y>
         <width>81</width>
         <height>21</height>
        </rect>
@@ -169,8 +169,8 @@
      <widget class="QComboBox" name="listenProtocol">
       <property name="geometry">
        <rect>
-        <x>140</x>
-        <y>60</y>
+        <x>110</x>
+        <y>50</y>
         <width>61</width>
         <height>22</height>
        </rect>
@@ -179,8 +179,8 @@
      <widget class="QLabel" name="label_5">
       <property name="geometry">
        <rect>
-        <x>80</x>
-        <y>60</y>
+        <x>40</x>
+        <y>50</y>
         <width>61</width>
         <height>21</height>
        </rect>
@@ -200,6 +200,44 @@
       </property>
       <property name="text">
        <string>Слушать</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="udpListenAdress">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>110</x>
+        <y>83</y>
+        <width>95</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="inputMethodHints">
+       <set>Qt::ImhDigitsOnly</set>
+      </property>
+      <property name="inputMask">
+       <string>000.000.000.000;_</string>
+      </property>
+      <property name="text">
+       <string>127.000.000.001</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_6">
+      <property name="geometry">
+       <rect>
+        <x>44</x>
+        <y>80</y>
+        <width>51</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>IP-адрес:</string>
       </property>
      </widget>
     </widget>

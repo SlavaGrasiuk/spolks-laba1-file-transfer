@@ -5,7 +5,9 @@
 #include <QMessageBox>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QUdpSocket>
 #include <QByteArray>
+#include <QTimer>
 #include "DragFrame.hpp"
 #include "lab1.h"
 
@@ -41,18 +43,20 @@ lab1::lab1(QWidget *parent): QMainWindow(parent) {
 
 	m_tcpServer = new QTcpServer(this);
 	m_tcpSocket = new QTcpSocket(this);
+	m_udpSocket = new QUdpSocket(this);
+	m_udpTimer = new QTimer(this);
 
 	connect(m_ui.startListenBtn, &QPushButton::clicked, this, &lab1::OnStartListen);
 	connect(m_ui.cancelBtn, &QPushButton::clicked, this, &lab1::OnCancelClick);
 
-	connect(m_tcpServer, &QTcpServer::newConnection, this, &lab1::OnIncomingConnection);
+	connect(m_tcpServer, &QTcpServer::newConnection, this, &lab1::OnTCPIncomingConnection);
 	connect(m_ui.listenPortEdit, &QLineEdit::textChanged, this, &lab1::OnListenPortChanged);
 	connect(m_ui.listenProtocol, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &lab1::OnListenProtocolChanged);
 
-	connect(m_tcpSocket, &QTcpSocket::connected, this, &lab1::OnClientConnectedToHost);
-	connect(m_tcpSocket, &QTcpSocket::bytesWritten, this, &lab1::OnClientWriteBytesToHost);
-	connect(m_tcpSocket, &QTcpSocket::disconnected, this, &lab1::OnClientDisconectedFromHost);
-	connect(m_tcpSocket, &QTcpSocket::readyRead, this, &lab1::OnClientReadyRead);
+	connect(m_tcpSocket, &QTcpSocket::connected, this, &lab1::OnTCPClientConnectedToHost);
+	connect(m_tcpSocket, &QTcpSocket::bytesWritten, this, &lab1::OnTCPClientWriteBytesToHost);
+	connect(m_tcpSocket, &QTcpSocket::disconnected, this, &lab1::OnTCPClientDisconectedFromHost);
+	connect(m_tcpSocket, &QTcpSocket::readyRead, this, &lab1::OnTCPClientReadyRead);
 
 	m_sendState = m_recvState = SendState::SendHeader;
 	m_recvSocket = nullptr;
@@ -64,6 +68,8 @@ lab1::~lab1
 ==================
 */
 lab1::~lab1() {
+	delete m_udpTimer;
+	delete m_udpSocket;
 	delete m_tcpServer;
 	delete m_tcpSocket;
 	delete m_dragFrame;
