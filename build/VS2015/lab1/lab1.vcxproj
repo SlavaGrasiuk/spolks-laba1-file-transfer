@@ -144,6 +144,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\DragFrame.cpp" />
+    <ClCompile Include="..\..\..\src\lab1.cpp" />
     <ClCompile Include="..\..\..\src\lab1_client.cpp" />
     <ClCompile Include="..\..\..\src\lab1_server.cpp" />
     <ClCompile Include="..\..\..\src\main.cpp" />

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>404</width>
-    <height>191</height>
+    <width>400</width>
+    <height>190</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,7 +20,7 @@
    <string>Лаба 1 - передача файлов</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QTabWidget" name="tabWidget">
+   <widget class="QTabWidget" name="endpointTypeTab">
     <property name="geometry">
      <rect>
       <x>5</x>
@@ -32,7 +32,7 @@
     <property name="currentIndex">
      <number>0</number>
     </property>
-    <widget class="QWidget" name="tab">
+    <widget class="QWidget" name="TransmitTab">
      <attribute name="title">
       <string>Передача</string>
      </attribute>
@@ -133,7 +133,7 @@
       </property>
      </widget>
     </widget>
-    <widget class="QWidget" name="tab_2">
+    <widget class="QWidget" name="ReceiveTab">
      <attribute name="title">
       <string>Приём</string>
      </attribute>

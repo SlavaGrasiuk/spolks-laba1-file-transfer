@@ -12,6 +12,9 @@ class QTcpServer;
 class QTcpSocket;
 
 
+constexpr qint64 g_blockLen = 32'768;		//'bytes (single brace in this comment are strongly necessary)
+
+
 class lab1 : public QMainWindow {
 	Q_OBJECT
 
@@ -22,19 +25,28 @@ class lab1 : public QMainWindow {
 		SendLastData
 	};
 
+	enum EndpointRole {
+		receive,
+		transmit
+	};
+
 public:
 	lab1(QWidget *parent = 0);
 	~lab1();
 
 private slots:
-	void OnOpenFile(std::string name);
+	void OnCancelClick();
+	void OnClientOpenFile(std::string name);
 	void OnStartListen();
 	void OnIncomingConnection();
-	void OnConnected();
-	void OnBytesWrite(qint64 bytes);
+	void OnClientConnectedToHost();
+	void OnClientWriteBytesToHost(qint64 bytes);
 	void OnReadyRead();
-	void OnDisconected();
+	void OnHostLoseClient();
+	void OnClientDisconectedFromHost();
 	void OnClientReadyRead();
+	void OnListenPortChanged();
+	void OnListenProtocolChanged(int index);
 
 private:
 	Ui::lab1Window m_ui;
@@ -46,9 +58,16 @@ private:
 	QTcpServer *m_tcpServer;
 	QTcpSocket *m_tcpSocket, *m_recvSocket;
 	SendState m_sendState, m_recvState;
+	EndpointRole m_endpRole;
 
 private:
 	qint64 GetFileSize();
+	void ResetClient();
+	void ResetServer();
+	void EnableCancelAndPB();
+	void DisableCancelAndPB();
+	void InitTransmit();
+	void InitReceive();
 };
 
 #endif // LAB1_H
