@@ -48,6 +48,7 @@ lab1::lab1(QWidget *parent): QMainWindow(parent) {
 	connect(m_tcpServer, &QTcpServer::newConnection, this, &lab1::OnIncomingConnection);
 
 	connect(m_tcpSocket, &QTcpSocket::connected, this, &lab1::OnConnected);
+	connect(m_tcpSocket, &QTcpSocket::bytesWritten, this, &lab1::OnBytesWrite);
 	connect(m_tcpSocket, &QTcpSocket::disconnected, this, &lab1::OnDisconected);
 	connect(m_tcpSocket, &QTcpSocket::readyRead, this, &lab1::OnClientReadyRead);
 }
@@ -118,16 +119,16 @@ void lab1::OnBytesWrite(qint64 bytes) {
 	static char buffer[g_blockLen];
 
 	if (m_sendState == SendState::SendData) {
-		 m_fileToTransfer.read(buffer, g_blockLen);
-		 const qint64 readedSize = m_fileToTransfer.gcount();
-		 m_doneSize += readedSize;
+		m_fileToTransfer.read(buffer, g_blockLen);
+		const qint64 readedSize = m_fileToTransfer.gcount();
+		m_doneSize += readedSize;
 		 
-			m_tcpSocket->write(buffer, readedSize);
-		 m_ui.progressBar->setValue(m_doneSize);
+		m_tcpSocket->write(buffer, readedSize);
+		m_ui.progressBar->setValue(m_doneSize);
 
-		 if (readedSize < g_blockLen) {
-			 m_sendState = SendState::SendLastData;
-		 }
+		if (readedSize < g_blockLen) {
+			m_sendState = SendState::SendLastData;
+		}
 	} else if (m_sendState == SendState::SendLastData) {
 		//all data transfered successful
 	}
@@ -144,7 +145,7 @@ void lab1::OnReadyRead() {
 		const qint64 size = *reinterpret_cast<const qint64*>(header.data());
 		const QString incomingFileName(header.mid(sizeof size));
 
-		auto reply = QMessageBox::question(this, "Incoming file", "Receive file " + incomingFileName + " (" + QString::number(size) + " bytes) from " + m_recvSocket->peerAddress().toString() + '?', QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::No);
+		auto reply = QMessageBox::question(this, QString::fromLocal8Bit("Входящий файл"), QString::fromLocal8Bit("Принять файл ") + incomingFileName + " (" + QString::number(size) + QString::fromLocal8Bit(" байт) от ") + m_recvSocket->peerAddress().toString() + '?', QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::No);
 		if (reply == QMessageBox::StandardButton::Yes) {
 			auto saveFileName = QFileDialog::getSaveFileName(this, QString::fromLocal8Bit("Сохранить файл"), incomingFileName, QString::fromLocal8Bit("Все файлы (*.*)"));
 			if (saveFileName.isEmpty()) {
